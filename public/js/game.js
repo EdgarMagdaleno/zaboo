@@ -1,12 +1,7 @@
-class Player extends Phaser.GameObject.Sprite {
-  constructor(scene) {
-    super(scene);
-    //Phaser.GameObjects.Image.call(this, scene, 0, 0,  )
-  }
-
-  update() {
-
-  }
+function Player(player, cursors, scene) {
+  player.setAngularVelocity(100);
+  player.setDrag(100);
+  return player;
 }
 
 class MyScene extends Phaser.Scene {
@@ -24,8 +19,11 @@ class MyScene extends Phaser.Scene {
 
   create() {
     this.socket = io();
-    this.otherPlayers = this.physics.add.group();
+    this.other_entities = this.physics.add.group();
     this.my_entities = this.physics.add.group();
+    this.cursors = this.input.keyboard.createCursorKeys();
+
+    let p = Player(this.physics.add.image(20, 20, 'ship'), this.cursors, this);
 
     let self = this;
     this.socket.on('currentPlayers', function(players) {
@@ -33,17 +31,17 @@ class MyScene extends Phaser.Scene {
         if (players[id].playerId === self.socket.id) {
           self.addPlayer(players[id]);
         } else {
-          self.addOtherPlayers(players[id]);
+          self.add_other_entities(players[id]);
         }
       });
     });
 
     this.socket.on('newPlayer', function (playerInfo) {
-      this.addOtherPlayers(playerInfo);
+      this.add_other_entities(playerInfo);
     });
 
     this.socket.on('disconnect', function (playerId) {
-      this.otherPlayers.getChildren().forEach(function (otherPlayer) {
+      this.other_entities.getChildren().forEach(function (otherPlayer) {
         if (playerId === otherPlayer.playerId) {
           otherPlayer.destroy();
         }
@@ -51,14 +49,13 @@ class MyScene extends Phaser.Scene {
     });
 
     this.socket.on('playerMoved', function (playerInfo) {
-      this.otherPlayers.getChildren().forEach(function (otherPlayer) {
+      this.other_entities.getChildren().forEach(function (otherPlayer) {
         if (playerInfo.playerId === otherPlayer.playerId) {
           otherPlayer.setRotation(playerInfo.rotation);
           otherPlayer.setPosition(playerInfo.x, playerInfo.y);
         }
       });
     });
-    this.cursors = this.input.keyboard.createCursorKeys();
 
     /*
     this.blueScoreText = this.add.text(16, 16, '', { fontSize: '32px', fill: '#0000FF' });
@@ -81,17 +78,19 @@ class MyScene extends Phaser.Scene {
 
   addPlayer(playerInfo) {
     this.ship = this.physics.add.image(playerInfo.x, playerInfo.y, 'ship').setOrigin(0.5, 0.5).setDisplaySize(53, 40);
+
     if (playerInfo.team === 'blue') {
       this.ship.setTint(0x0000ff);
     } else {
       this.ship.setTint(0xff0000);
     }
+
     this.ship.setDrag(100);
     this.ship.setAngularDrag(100);
     this.ship.setMaxVelocity(200);
   }
 
-  addOtherPlayers(playerInfo) {
+  add_other_entities(playerInfo) {
     const otherPlayer = this.add.sprite(playerInfo.x, playerInfo.y, 'otherPlayer').setOrigin(0.5, 0.5).setDisplaySize(53, 40);
     if (playerInfo.team === 'blue') {
       otherPlayer.setTint(0x0000ff);
@@ -99,7 +98,7 @@ class MyScene extends Phaser.Scene {
       otherPlayer.setTint(0xff0000);
     }
     otherPlayer.playerId = playerInfo.playerId;
-    this.otherPlayers.add(otherPlayer);
+    this.other_entities.add(otherPlayer);
   }
 
   update() {
@@ -145,11 +144,10 @@ var config = {
   physics: {
     default: 'arcade',
     arcade: {
-      debug: false,
-      gravity: { y: 0 }
+      debug: false
     }
   },
-  scene: [MyScene]
+  scene: MyScene
 };
 
 var game = new Phaser.Game(config);
