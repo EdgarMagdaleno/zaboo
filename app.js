@@ -22,12 +22,16 @@ io.on('connection', function (socket) {
   socket.on('my_entities', function(my_entities) {
     server_entities[socket.id] = my_entities;
   });
+
+  socket.on('collision', (collision) => {
+    socket.broadcast.to(collision.id).emit('collision', collision.entity);
+  });
 });
 
 setInterval(() => {
   io.sockets.emit('server_entities', server_entities);
 }, 33);
 
-server.listen(8081, function () {
+server.listen(3000, function () {
   console.log(`Listening on ${server.address().port}`);
 });

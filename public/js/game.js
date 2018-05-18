@@ -1,42 +1,70 @@
-function Bullet(x, y, rotation, scene) {
-  let b = scene.physics.add.image(x, y, 'ship');
-  scene.my_entities.add(b);
-  b.rotation = rotation;
-  return b;
-}
+function spawn_bullet(x, y, rotation, scene) {
+  let bullet = scene.physics.add.image(x, y, 'bullet');
+  scene.my_entities.add(bullet);
 
-function Player(x, y, scene) {
-  let p = scene.physics.add.image(50, 50, 'ship');
-  scene.my_entities.add(p);
-
-  p.name = scene.socket.id;
-  p.setDrag(100);
-  p.setAngularDrag(100);
-  p.setMaxVelocity(200);
-
-  p.update = function() {
-    if(scene.cursors.left.isDown) {
-      p.setAngularVelocity(-150);
-    }
-    else if(scene.cursors.right.isDown) {
-      p.setAngularVelocity(150);
-    }
-    else {
-      p.setAngularVelocity(0);
-    }
-
-    if(scene.cursors.up.isDown) {
-      scene.physics.velocityFromRotation(p.rotation + 1.5, 100, p.body.acceleration);
-    } else {
-      p.setAcceleration(0);
-    }
-
-    if(Phaser.Input.Keyboard.JustDown(scene.spacebar)) {
-      Bullet(p.x, p.y, p.rotation, scene);
+  bullet.setScale(0.15);
+  bullet.setVelocityY(1000 * Math.cos(rotation));
+  bullet.setVelocityX(1000 * Math.sin(-rotation));
+  bullet.rotation = rotation;
+  bullet.name = scene.socket.id;
+  bullet.update = () => {
+    if(bullet.x < 0 || bullet.x > 800 || bullet.y < 0 || bullet.y > 600) {
+      console.log("destroyed");
+      bullet.destroy();
     }
   }
 
-  return p;
+  scene.physics.add.overlap(bullet, scene.other_entities, (bullet, entity) => {
+    console.log(entity);
+    if(entity.texture.key == "ship") {
+      bullet.destroy();
+      scene.socket.emit('collision', {id: entity.name, entity: bullet});
+    }
+  }, null, scene);
+
+  return bullet;
+}
+
+function spawn_player(x, y, scene) {
+  let player = scene.physics.add.sprite(50, 50, 'ship');
+  scene.my_entities.add(player);
+
+  player.customData = {a: 10};
+  player.life = 100;
+  player.name = scene.socket.id;
+  player.setDrag(100);
+  player.setAngularDrag(100);
+  player.setMaxVelocity(200);
+
+  player.update = function() {
+    if(scene.cursors.left.isDown) {
+      player.setAngularVelocity(-150);
+    }
+    else if(scene.cursors.right.isDown) {
+      player.setAngularVelocity(150);
+    }
+    else {
+      player.setAngularVelocity(0);
+    }
+
+    if(scene.cursors.up.isDown) {
+      scene.physics.velocityFromRotation(player.rotation + 1.5, 100, player.body.acceleration);
+    } else {
+      player.setAcceleration(0);
+    }
+
+    if(Phaser.Input.Keyboard.JustDown(scene.spacebar)) {
+      spawn_bullet(player.x, player.y, player.rotation, scene);
+    }
+  }
+
+  scene.socket.on('collision', (collision) => {
+    if(collision.textureKey == "bullet") {
+      console.log("ouch");
+    }
+  });
+
+  return player;
 }
 
 class MyScene extends Phaser.Scene {
@@ -48,8 +76,7 @@ class MyScene extends Phaser.Scene {
   
   preload() {
     this.load.image('ship', 'assets/spaceShips_001.png');
-    this.load.image('otherPlayer', 'assets/enemyBlack5.png');
-    this.load.image('star', 'assets/star_gold.png');
+    this.load.image('bullet', 'assets/bullet.png');
   }
 
   create() {
@@ -62,7 +89,7 @@ class MyScene extends Phaser.Scene {
 
     let self = this;
     this.socket.on('connect', () => {
-      Player(50, 50, this);
+      spawn_player(50, 50, this);
     });
 
     this.socket.on('server_entities', function(server_entities) {
@@ -71,10 +98,13 @@ class MyScene extends Phaser.Scene {
       });
 
       Object.keys(server_entities).forEach(function(id) {
+        // console.log(server_entities);
         if(id != self.socket.id) {
           server_entities[id].forEach((entity) => {
             let e = self.physics.add.image(entity.x, entity.y, entity.textureKey);
             e.rotation = entity.rotation;
+            e.setScale(entity.scale.x);
+            e.name = entity.name;
             self.other_entities.add(e);
           });
         }
@@ -87,7 +117,7 @@ class MyScene extends Phaser.Scene {
   }
 
   update() {
-    scene.physics.velocityFromRotation(b.rotation, 100);
+    
     this.my_entities.getChildren().forEach((e) => {
       if(e.update) e.update();
     });
