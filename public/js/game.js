@@ -9,13 +9,11 @@ function spawn_bullet(x, y, rotation, scene) {
   bullet.name = scene.socket.id;
   bullet.update = () => {
     if(bullet.x < 0 || bullet.x > 800 || bullet.y < 0 || bullet.y > 600) {
-      console.log("destroyed");
       bullet.destroy();
     }
   }
 
   scene.physics.add.overlap(bullet, scene.other_entities, (bullet, entity) => {
-    console.log(entity);
     if(entity.texture.key == "ship") {
       bullet.destroy();
       scene.socket.emit('collision', {id: entity.name, entity: bullet});
@@ -60,7 +58,7 @@ function spawn_player(x, y, scene) {
 
   scene.socket.on('collision', (collision) => {
     if(collision.textureKey == "bullet") {
-      console.log("ouch");
+     scene.life -= 5;
     }
   });
 
@@ -77,6 +75,7 @@ class MyScene extends Phaser.Scene {
   preload() {
     this.load.image('ship', 'assets/spaceShips_001.png');
     this.load.image('bullet', 'assets/bullet.png');
+    this.load.image('life', 'assets/life.png');
   }
 
   create() {
@@ -84,12 +83,29 @@ class MyScene extends Phaser.Scene {
     this.other_entities = this.physics.add.group();
     this.my_entities = this.physics.add.group();
     this.cursors = this.input.keyboard.createCursorKeys();
+    this.lifepoints = 100;
 
     this.spacebar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
     let self = this;
     this.socket.on('connect', () => {
-      spawn_player(50, 50, this);
+      self.player = spawn_player(50, 50, this);
+      self.life = self.physics.add.image(self.player.x, self.player.y - 20, "life");
+
+      self.life.update = () => {
+        if(self.player) {
+          console.log("p: ", self.player.x - 50);
+          self.life.x = self.player.x - 50;
+          self.life.y = self.player.y - 60;
+        }
+      }
+
+      self.life.scaleX = self.lifepoints;
+      self.life.scaleY = 15;
+      self.life._displayOriginX = 0;
+      self.life._displayOriginY = 0;
+      self.my_entities.add(self.life);
+      console.log(self.life);
     });
 
     this.socket.on('server_entities', function(server_entities) {
@@ -105,6 +121,7 @@ class MyScene extends Phaser.Scene {
             e.rotation = entity.rotation;
             e.setScale(entity.scale.x);
             e.name = entity.name;
+            e._displayOriginY = entity.originY;
             self.other_entities.add(e);
           });
         }

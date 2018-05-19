@@ -20,6 +20,7 @@ io.on('connection', function (socket) {
   });
 
   socket.on('my_entities', function(my_entities) {
+    console.log(my_entities);
     server_entities[socket.id] = my_entities;
   });
 
@@ -32,6 +33,6 @@ setInterval(() => {
   io.sockets.emit('server_entities', server_entities);
 }, 33);
 
-server.listen(3000, function () {
+server.listen(2000, function () {
   console.log(`Listening on ${server.address().port}`);
 });
