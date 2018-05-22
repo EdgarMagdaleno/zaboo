@@ -78,6 +78,7 @@ class MyScene extends Phaser.Scene {
 		this.load.image('ship', 'assets/spaceShips_001.png');
 		this.load.image('bullet', 'assets/bullet.png');
 		this.load.image('life', 'assets/life.png');
+		this.load.image("space", "assets/space.jpg");
 	}
 
 	create() {
@@ -148,11 +149,22 @@ class Lobby extends Phaser.Scene {
 	create() {
 		console.log(this);
 		SOCKET = io();
+
 		let self = this;
 		SOCKET.on('side', (side) => {
+			console.log("Side: " + side);
 			self.side = side;
-			console.log(side);
 		})
+
+		SOCKET.on('ready', (side) => {
+			console.log(side + " player is ready");
+			if(this.side) t = this.add.text(600, 300, "READY");
+			else t = this.add.text(200, 300, "READY");
+		})
+
+		SOCKET.on('start', () => {
+			this.scene.start('MyScene');
+		});
 
 		this.spacebar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 		this.add.image(400, 300, "space");
@@ -164,8 +176,10 @@ class Lobby extends Phaser.Scene {
 
 	update() {
 		if(Phaser.Input.Keyboard.JustDown(this.spacebar)) {
-			if(this.side) this.add.text(200, 300, "READY");
-			else this.add.text(600, 300, "READY");
+			if(this.side) this.ready = this.add.text(200, 300, "READY");
+			else this.ready = this.add.text(600, 300, "READY");
+
+			SOCKET.emit('ready', this.side);
 		}
 	}
 }

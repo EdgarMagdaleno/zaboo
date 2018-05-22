@@ -5,6 +5,7 @@ var io = require('socket.io').listen(server);
 
 var server_entities = {};
 var left = null;
+var ready = 0;
 
 app.use(express.static(__dirname + '/public'));
 
@@ -26,6 +27,16 @@ io.on('connection', function (socket) {
   }
 
   socket.emit('side', left);
+
+  socket.on('ready', (side) => {
+    socket.broadcast.emit('ready', side);
+
+    ready++;
+
+    if(ready == 2) {
+      io.emit('start');
+    }
+  });
 
   socket.on('disconnect', function () {
     console.log('disconnect: ', socket.id);
