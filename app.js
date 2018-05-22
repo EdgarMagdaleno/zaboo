@@ -20,7 +20,6 @@ io.on('connection', function (socket) {
   });
 
   socket.on('my_entities', function(my_entities) {
-    console.log(my_entities);
     server_entities[socket.id] = my_entities;
   });
 

@@ -58,7 +58,7 @@ function spawn_player(x, y, scene) {
 
   scene.socket.on('collision', (collision) => {
     if(collision.textureKey == "bullet") {
-     scene.life -= 5;
+     scene.lifepoints -= 5;
     }
   });
 
@@ -90,22 +90,17 @@ class MyScene extends Phaser.Scene {
     let self = this;
     this.socket.on('connect', () => {
       self.player = spawn_player(50, 50, this);
-      self.life = self.physics.add.image(self.player.x, self.player.y - 20, "life");
+      self.healthbar = self.physics.add.image(self.player.x, self.player.y - 20, "life");
 
-      self.life.update = () => {
-        if(self.player) {
-          console.log("p: ", self.player.x - 50);
-          self.life.x = self.player.x - 50;
-          self.life.y = self.player.y - 60;
-        }
+      self.healthbar.update = () => {
+        self.healthbar.scaleX = self.lifepoints;
+        self.healthbar.x = self.player.x + 50;
+        self.healthbar.y = self.player.y - 55;
       }
 
-      self.life.scaleX = self.lifepoints;
-      self.life.scaleY = 15;
-      self.life._displayOriginX = 0;
-      self.life._displayOriginY = 0;
-      self.my_entities.add(self.life);
-      console.log(self.life);
+      self.healthbar.scaleX = self.lifepoints;
+      self.healthbar.scaleY = 15;
+      self.my_entities.add(self.healthbar);
     });
 
     this.socket.on('server_entities', function(server_entities) {
@@ -114,14 +109,15 @@ class MyScene extends Phaser.Scene {
       });
 
       Object.keys(server_entities).forEach(function(id) {
-        // console.log(server_entities);
         if(id != self.socket.id) {
           server_entities[id].forEach((entity) => {
             let e = self.physics.add.image(entity.x, entity.y, entity.textureKey);
             e.rotation = entity.rotation;
-            e.setScale(entity.scale.x);
+            e.scaleX = entity.scale.x;
+            e.scaleY = entity.scale.y;
+            e.originX = entity.origin.x;
+            e.originY = entity.origin.y;
             e.name = entity.name;
-            e._displayOriginY = entity.originY;
             self.other_entities.add(e);
           });
         }
