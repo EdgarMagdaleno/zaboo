@@ -28,6 +28,10 @@ io.on('connection', function (socket) {
 
   socket.emit('side', left);
 
+  socket.on('gameover', (side) => {
+    io.sockets.emit('gameover', side);
+  })
+
   socket.on('ready', (side) => {
     socket.broadcast.emit('ready', side);
 
